@@ -1,0 +1,30 @@
+---
+# yamllint disable rule:line-length
+
+name: CI/CD
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    container:
+      image: mijdavis2/pre-commit-terraform:latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Run tests
+        run: |
+          make test
