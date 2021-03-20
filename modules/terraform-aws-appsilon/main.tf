@@ -215,8 +215,36 @@ resource "aws_ecs_cluster" "appsilon" {
 }
 
 # -----------------------------------------------------------------------------
-# Create IAM
+# Create logging
 # -----------------------------------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "appsilon" {
+  name = "/ecs/appsilon"
+}
+
+# -----------------------------------------------------------------------------
+# Create IAM for logging
+# -----------------------------------------------------------------------------
+
+data "aws_iam_policy_document" "appsilon_log_publishing" {
+  statement {
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:PutLogEventsBatch",
+    ]
+
+    resources = ["arn:aws:logs:${var.region}:*:log-group:/ecs/appsilon:*"]
+  }
+}
+
+resource "aws_iam_policy" "appsilon_log_publishing" {
+  name        = "appsilon-log-pub"
+  path        = "/"
+  description = "Allow publishing to cloudwach"
+
+  policy = data.aws_iam_policy_document.appsilon_log_publishing.json
+}
 
 data "aws_iam_policy_document" "appsilon_assume_role_policy" {
   statement {
@@ -233,6 +261,11 @@ resource "aws_iam_role" "appsilon_role" {
   name               = "appsilon-role"
   path               = "/system/"
   assume_role_policy = data.aws_iam_policy_document.appsilon_assume_role_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "appsilon_role_log_publishing" {
+  role       = aws_iam_role.appsilon_role.name
+  policy_arn = aws_iam_policy.appsilon_log_publishing.arn
 }
 
 # -----------------------------------------------------------------------------
@@ -260,6 +293,15 @@ locals {
         }
       ]
 
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.appsilon.name,
+          awslogs-region        = var.region,
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+
       environment = flatten([local.ecs_environment, var.environment])
     }
   ]
@@ -283,6 +325,7 @@ resource "aws_ecs_task_definition" "appsilon" {
 resource "aws_ecs_service" "appsilon" {
   depends_on = [
     aws_ecs_task_definition.appsilon,
+    aws_cloudwatch_log_group.appsilon,
     aws_alb_listener.appsilon
   ]
   name            = "appsilon-service"
@@ -304,6 +347,42 @@ resource "aws_ecs_service" "appsilon" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Create the ALB log bucket
+# -----------------------------------------------------------------------------
+
+#tfsec:ignore:AWS002 tfsec:ignore:AWS017
+resource "aws_s3_bucket" "appsilon" {
+  bucket        = "appsilon-${var.region}-${var.appsilon_subdomain}-${var.domain}"
+  acl           = "private"
+  force_destroy = "true"
+}
+
+# -----------------------------------------------------------------------------
+# Add IAM policy to allow the ALB to log to it
+# -----------------------------------------------------------------------------
+
+data "aws_elb_service_account" "main" {
+}
+
+data "aws_iam_policy_document" "appsilon" {
+  statement {
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.appsilon.arn}/alb/*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = [data.aws_elb_service_account.main.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "appsilon" {
+  bucket = aws_s3_bucket.appsilon.id
+  policy = data.aws_iam_policy_document.appsilon.json
+}
+
+
 
 # -----------------------------------------------------------------------------
 # Create the ALB
@@ -314,6 +393,12 @@ resource "aws_alb" "appsilon" {
   name            = "appsilon-alb"
   subnets         = aws_subnet.appsilon_public.*.id
   security_groups = [aws_security_group.appsilon_alb.id]
+
+  access_logs {
+    bucket  = aws_s3_bucket.appsilon.id
+    prefix  = "alb"
+    enabled = true
+  }
 }
 
 # -----------------------------------------------------------------------------
