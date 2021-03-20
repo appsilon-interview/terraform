@@ -59,15 +59,23 @@ resource "aws_vpc" "appsilon" {
   enable_dns_hostnames = true
 }
 
-# Create 1 private subnet for RDS
+# Fetch AZs in the current region
+data "aws_availability_zones" "available" {
+}
+
+# Create var.az_count private subnets for RDS, each in a different AZ
 resource "aws_subnet" "appsilon_private" {
-  cidr_block        = cidrsubnet(aws_vpc.appsilon.cidr_block, 8, 1)
+  count             = var.az_count
+  cidr_block        = cidrsubnet(aws_vpc.appsilon.cidr_block, 8, count.index)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
   vpc_id            = aws_vpc.appsilon.id
 }
 
-# Create 1 public subnet for RDS
+# Create var.az_count public subnets for appsilon, each in a different AZ
 resource "aws_subnet" "appsilon_public" {
-  cidr_block              = cidrsubnet(aws_vpc.appsilon.cidr_block, 8, 2)
+  count                   = var.az_count
+  cidr_block              = cidrsubnet(aws_vpc.appsilon.cidr_block, 8, var.az_count + count.index)
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   vpc_id                  = aws_vpc.appsilon.id
   map_public_ip_on_launch = true
 }

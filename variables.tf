@@ -52,3 +52,8 @@ variable "ecs_cluster_name" {
   description = "The name to assign to the ECS cluster"
   default     = "appsilon-cluster"
 }
+
+variable "az_count" {
+  description = "How many AZ's to create in the VPC"
+  default     = 2
+}
