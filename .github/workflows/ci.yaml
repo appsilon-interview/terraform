@@ -25,4 +25,4 @@ jobs:
       - uses: actions/checkout@v2
       - name: Run tests
         run: |
-          make test
+          pre-commit run --all-files --verbose --show-diff-on-failure --color always
