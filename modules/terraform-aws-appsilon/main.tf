@@ -87,7 +87,8 @@ resource "aws_internet_gateway" "appsilon" {
 
 # Route the public subnet traffic through the IGW
 resource "aws_route" "internet_access" {
-  route_table_id         = aws_vpc.appsilon.main_route_table_id
+  route_table_id = aws_vpc.appsilon.main_route_table_id
+  #tfsec:ignore:AWS006
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.appsilon.id
 }
@@ -103,16 +104,18 @@ resource "aws_security_group" "appsilon_alb" {
   vpc_id      = aws_vpc.appsilon.id
 
   ingress {
-    protocol    = "tcp"
-    from_port   = 443
-    to_port     = 443
+    protocol  = "tcp"
+    from_port = 443
+    to_port   = 443
+    #tfsec:ignore:AWS008
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    #tfsec:ignore:AWS009
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -131,9 +134,10 @@ resource "aws_security_group" "appsilon_ecs" {
   }
 
   egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
+    protocol  = "-1"
+    from_port = 0
+    to_port   = 0
+    #tfsec:ignore:AWS009
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -152,9 +156,10 @@ resource "aws_security_group" "appsilon_rds" {
   }
 
   egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
+    protocol  = "-1"
+    from_port = 0
+    to_port   = 0
+    #tfsec:ignore:AWS009
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -169,15 +174,16 @@ resource "aws_db_subnet_group" "appsilon" {
 }
 
 resource "aws_db_instance" "appsilon" {
-  name                   = var.rds_db_name
-  identifier             = "appsilon"
-  username               = var.rds_username
-  password               = var.rds_password
-  port                   = "5432"
-  engine                 = "postgres"
-  engine_version         = "10.5"
-  instance_class         = var.rds_instance
-  allocated_storage      = "10"
+  name              = var.rds_db_name
+  identifier        = "appsilon"
+  username          = var.rds_username
+  password          = var.rds_password
+  port              = "5432"
+  engine            = "postgres"
+  engine_version    = "10.5"
+  instance_class    = var.rds_instance
+  allocated_storage = "10"
+  #tfsec:ignore:AWS052
   storage_encrypted      = var.rds_storage_encrypted
   vpc_security_group_ids = [aws_security_group.appsilon_rds.id]
   db_subnet_group_name   = aws_db_subnet_group.appsilon.name
@@ -188,7 +194,7 @@ resource "aws_db_instance" "appsilon" {
 
   allow_major_version_upgrade = false
   auto_minor_version_upgrade  = false
-  apply_immediately           = true
+  apply_immediately           = false
   maintenance_window          = "sun:02:00-sun:04:00"
   skip_final_snapshot         = true
   copy_tags_to_snapshot       = true
@@ -303,6 +309,7 @@ resource "aws_ecs_service" "appsilon" {
 # Create the ALB
 # -----------------------------------------------------------------------------
 
+#tfsec:ignore:AWS005
 resource "aws_alb" "appsilon" {
   name            = "appsilon-alb"
   subnets         = aws_subnet.appsilon_public.*.id
