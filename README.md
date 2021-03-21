@@ -20,7 +20,7 @@ No resources.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| appsilon\_subdomain | The Subdomain for your appsilon graphql service. | `string` | `"appsilon"` | no |
+| appsilon\_subdomain | The Subdomain for your appsilon service. | `string` | `"appsilon"` | no |
 | appsilon\_version\_tag | The Docker image tag version. | `any` | n/a | yes |
 | az\_count | How many AZ's to create in the VPC | `number` | `2` | no |
 | domain | Domain name. Service will be deployed using the appsilon\_subdomain | `any` | n/a | yes |

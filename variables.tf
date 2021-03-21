@@ -19,7 +19,7 @@ variable "domain" {
 }
 
 variable "appsilon_subdomain" {
-  description = "The Subdomain for your appsilon graphql service."
+  description = "The Subdomain for your appsilon service."
   default     = "appsilon"
 }
 
