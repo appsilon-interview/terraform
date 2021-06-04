@@ -275,8 +275,24 @@ resource "aws_iam_role_policy_attachment" "appsilon_role_log_publishing" {
 locals {
   ecs_environment = [
     {
-      name  = "DATABASE_URL",
+      name  = "DATABASE_URI",
       value = "postgres://${var.rds_username}:${var.rds_password}@${aws_db_instance.appsilon.endpoint}/${var.rds_db_name}"
+    },
+    {
+      name  = "RDS_USERNAME",
+      value = "${var.rds_username}"
+    },
+    {
+      name  = "RDS_PASSWORD",
+      value = "${var.rds_password}"
+    },
+    {
+      name  = "RDS_ENDPOINT",
+      value = "${aws_db_instance.appsilon.endpoint}"
+    },
+    {
+      name  = "RDS_DB_NAME",
+      value = "${var.rds_db_name}"
     }
   ]
 
